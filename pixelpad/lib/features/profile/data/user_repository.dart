@@ -52,7 +52,7 @@ abstract class UserDataSource {
 class BackendUserDataSource implements UserDataSource {
   BackendUserDataSource({
     http.Client? client,
-    this.baseUrl = 'http://10.0.2.2:8080',
+    this.baseUrl = 'http://backend.edmounds.top',
   }) : _client = client ?? http.Client();
 
   final http.Client _client;

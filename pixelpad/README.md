@@ -63,7 +63,7 @@ python Mock/mock_backend.py
 - `lib/features/make/data/make_api.dart`
 - `lib/features/profile/data/user_repository.dart`
 
-Android 模拟器使用 `10.0.2.2:8080` 访问宿主机；真机调试请改为你的本机局域网 IP。
+Android 模拟器使用 `backend.edmounds.top` 访问宿主机；真机调试请改为你的本机局域网 IP。
 
 Mock 账号（预置）：
 - 手机号：`13800000000`
@@ -96,7 +96,7 @@ python Mock/mock_backend.py
 ```
 
 确保 App 端请求地址指向本机 Mock 服务：
-- Android 模拟器：`10.0.2.2:8080`
+- Android 模拟器：`backend.edmounds.top`
 - 真机：替换为本机局域网 IP
 
 ## 许可证
