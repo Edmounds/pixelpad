@@ -8,6 +8,7 @@ plugins {
 android {
     namespace = "com.example.pixelpad"
     compileSdk = flutter.compileSdkVersion
+    buildToolsVersion = "36.0.0"
     ndkVersion = flutter.ndkVersion
 
     compileOptions {

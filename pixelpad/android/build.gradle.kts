@@ -1,5 +1,9 @@
+import com.android.build.gradle.BaseExtension
+
 allprojects {
     repositories {
+        maven(url = "https://maven.aliyun.com/repository/public")
+        maven(url = "https://maven.aliyun.com/repository/google")
         google()
         mavenCentral()
     }
@@ -16,6 +20,16 @@ subprojects {
     project.layout.buildDirectory.value(newSubprojectBuildDir)
 }
 subprojects {
+    plugins.withId("com.android.application") {
+        extensions.configure<BaseExtension>("android") {
+            buildToolsVersion = "36.0.0"
+        }
+    }
+    plugins.withId("com.android.library") {
+        extensions.configure<BaseExtension>("android") {
+            buildToolsVersion = "36.0.0"
+        }
+    }
     project.evaluationDependsOn(":app")
 }
 
