@@ -6,6 +6,7 @@ import 'package:pixelpad/core/app/navigation.dart';
 import 'package:pixelpad/core/theme/app_theme.dart';
 import 'package:pixelpad/features/device/data/inventory_api_service.dart';
 import 'package:pixelpad/features/make/data/bean_preset_storage.dart';
+import 'package:pixelpad/features/make/presentation/widgets/picker_bar.dart';
 
 const List<String> _fallbackBeanBrands = [
   'Coco',
@@ -276,7 +277,7 @@ class _BeanPresetScreenState extends State<BeanPresetScreen> {
               ),
             ],
             const SizedBox(height: 18),
-            _PickerBar(
+            PickerBar(
               controller: _brandController,
               itemCount: _beanBrands.length,
               onPageChanged: _onBrandChanged,
@@ -323,7 +324,7 @@ class _BeanPresetScreenState extends State<BeanPresetScreen> {
             const SizedBox(height: 6),
             const Icon(Icons.arrow_drop_up, size: 36, color: Color(0xFFF9F871)),
             const SizedBox(height: 12),
-            _PickerBar(
+            PickerBar(
               controller: _countController,
               itemCount: _colorCounts.length,
               onPageChanged: _onCountChanged,
@@ -346,105 +347,6 @@ class _BeanPresetScreenState extends State<BeanPresetScreen> {
             ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-class _PickerBar extends StatelessWidget {
-  final PageController controller;
-  final int itemCount;
-  final ValueChanged<int> onPageChanged;
-  final Widget Function(
-    BuildContext context,
-    int index,
-    double scale,
-    double opacity,
-  )
-  itemBuilder;
-
-  const _PickerBar({
-    required this.controller,
-    required this.itemCount,
-    required this.onPageChanged,
-    required this.itemBuilder,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: 96,
-      width: double.infinity,
-      color: const Color(0xFFB8A6FF),
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final double itemWidth =
-              constraints.maxWidth * controller.viewportFraction;
-          final double centerX = constraints.maxWidth / 2;
-          final double lineOffset = itemWidth * 0.6;
-
-          return Stack(
-            children: [
-              Positioned.fill(
-                child: PageView.builder(
-                  controller: controller,
-                  itemCount: itemCount,
-                  onPageChanged: onPageChanged,
-                  itemBuilder: (context, index) {
-                    return AnimatedBuilder(
-                      animation: controller,
-                      builder: (context, child) {
-                        final double page = controller.hasClients
-                            ? controller.page ??
-                                  controller.initialPage.toDouble()
-                            : controller.initialPage.toDouble();
-                        final double distance = (page - index).abs().clamp(
-                          0.0,
-                          2.0,
-                        );
-                        final double scale = 1 - (distance * 0.15);
-                        final double opacity = 1 - (distance * 0.3);
-
-                        return Center(
-                          child: Transform.scale(
-                            scale: scale,
-                            child: Opacity(
-                              opacity: opacity,
-                              child: itemBuilder(
-                                context,
-                                index,
-                                scale,
-                                opacity,
-                              ),
-                            ),
-                          ),
-                        );
-                      },
-                    );
-                  },
-                ),
-              ),
-              Positioned(
-                left: centerX - lineOffset,
-                top: (96 - 62) / 2,
-                child: Container(
-                  width: 2,
-                  height: 62,
-                  color: Colors.white.withValues(alpha: 0.9),
-                ),
-              ),
-              Positioned(
-                left: centerX + lineOffset - 2,
-                top: (96 - 62) / 2,
-                child: Container(
-                  width: 2,
-                  height: 62,
-                  color: Colors.white.withValues(alpha: 0.9),
-                ),
-              ),
-            ],
-          );
-        },
       ),
     );
   }

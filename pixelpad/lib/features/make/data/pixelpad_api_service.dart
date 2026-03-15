@@ -6,9 +6,13 @@ import 'package:http/http.dart' as http;
 import 'package:pixelpad/features/make/data/make_api.dart';
 
 class PixelPadApiService {
-  const PixelPadApiService();
+  PixelPadApiService({http.Client? client, this.baseUrl = makeApiBaseUrl})
+    : _client = client ?? http.Client();
 
   static const Duration _timeout = Duration(seconds: 20);
+
+  final http.Client _client;
+  final String baseUrl;
 
   Future<SessionResult> createSession({
     required Uint8List imageBytes,
@@ -17,14 +21,14 @@ class PixelPadApiService {
   }) async {
     final http.MultipartRequest request = http.MultipartRequest(
       'POST',
-      Uri.parse('$makeApiBaseUrl/sessions'),
+      Uri.parse('$baseUrl/sessions'),
     );
     request.fields['settings_file'] = settingsFile;
     request.files.add(
       http.MultipartFile.fromBytes('file', imageBytes, filename: filename),
     );
 
-    final http.StreamedResponse streamed = await request.send().timeout(
+    final http.StreamedResponse streamed = await _client.send(request).timeout(
       _timeout,
     );
     final http.Response response = await http.Response.fromStream(
@@ -39,9 +43,9 @@ class PixelPadApiService {
   Future<PerfectPixelResult> perfectPixel({
     required String sessionId,
   }) async {
-    final http.Response response = await http
+    final http.Response response = await _client
         .post(
-          Uri.parse('$makeApiBaseUrl/perfect_pixel'),
+          Uri.parse('$baseUrl/perfect_pixel'),
           body: {'session_id': sessionId},
         )
         .timeout(_timeout);
@@ -53,11 +57,19 @@ class PixelPadApiService {
 
   Future<RemoveBackgroundResult> removeBackground({
     required String sessionId,
+    int tolerance = 5,
+    bool tightCrop = true,
+    bool previewOnly = false,
   }) async {
-    final http.Response response = await http
+    final http.Response response = await _client
         .post(
-          Uri.parse('$makeApiBaseUrl/remove_background'),
-          body: {'session_id': sessionId},
+          Uri.parse('$baseUrl/remove_background'),
+          body: {
+            'session_id': sessionId,
+            'tolerance': tolerance.toString(),
+            'tight_crop': tightCrop ? 'true' : 'false',
+            'preview_only': previewOnly ? 'true' : 'false',
+          },
         )
         .timeout(_timeout);
     if (response.statusCode != 200) {
@@ -72,9 +84,9 @@ class PixelPadApiService {
     String colorMapMode = 'nearest',
     bool alphaHarden = true,
   }) async {
-    final http.Response response = await http
+    final http.Response response = await _client
         .post(
-          Uri.parse('$makeApiBaseUrl/color_map'),
+          Uri.parse('$baseUrl/color_map'),
           body: {
             'session_id': sessionId,
             'max_colors': maxColors.toString(),

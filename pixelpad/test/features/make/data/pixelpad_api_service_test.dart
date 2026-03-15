@@ -1,3 +1,7 @@
+import 'dart:convert';
+
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pixelpad/features/make/data/pixelpad_api_service.dart';
 
@@ -32,5 +36,42 @@ void main() {
     expect(result.palette[1].idx, 9);
     expect(result.palette[1].id, 'C7');
     expect(result.palette[1].hex, '#3977cc');
+  });
+
+  test('removeBackground sends tolerance and crop flags', () async {
+    late Uri capturedUri;
+    late Map<String, String> capturedFields;
+    final http.Client client = MockClient((http.Request request) async {
+      capturedUri = request.url;
+      capturedFields = request.bodyFields;
+      return http.Response(
+        jsonEncode(<String, dynamic>{
+          'width': 2,
+          'height': 2,
+          'bg_mask_rle_u32le_base64': '',
+          'bg_mask_start': false,
+        }),
+        200,
+        headers: <String, String>{'content-type': 'application/json'},
+      );
+    });
+
+    final PixelPadApiService service = PixelPadApiService(
+      client: client,
+      baseUrl: 'https://example.test',
+    );
+
+    await service.removeBackground(
+      sessionId: 'session-1',
+      tolerance: 17,
+      tightCrop: true,
+      previewOnly: false,
+    );
+
+    expect(capturedUri.toString(), 'https://example.test/remove_background');
+    expect(capturedFields['session_id'], 'session-1');
+    expect(capturedFields['tolerance'], '17');
+    expect(capturedFields['tight_crop'], 'true');
+    expect(capturedFields['preview_only'], 'false');
   });
 }
