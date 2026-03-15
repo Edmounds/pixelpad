@@ -74,4 +74,57 @@ void main() {
     expect(capturedFields['tight_crop'], 'true');
     expect(capturedFields['preview_only'], 'false');
   });
+
+  test('cutPixel sends session_id and tile_size and parses response', () async {
+    late Uri capturedUri;
+    late Map<String, String> capturedFields;
+    final http.Client client = MockClient((http.Request request) async {
+      capturedUri = request.url;
+      capturedFields = request.bodyFields;
+      return http.Response(
+        jsonEncode(<String, dynamic>{
+          'session_id': 'session-1',
+          'input_width': 50,
+          'input_height': 52,
+          'target_width': 52,
+          'target_height': 52,
+          'tile_size': 52,
+          'cols': 1,
+          'rows': 1,
+          'crop': <int>[0, 0, 0, 0],
+          'padding': <int>[1, 1, 0, 0],
+          'canvas_base64': 'ZmFrZS1jYW52YXM=',
+          'tiles_base64': <String>['ZmFrZS10aWxl'],
+        }),
+        200,
+        headers: <String, String>{'content-type': 'application/json'},
+      );
+    });
+
+    final dynamic service = PixelPadApiService(
+      client: client,
+      baseUrl: 'https://example.test',
+    );
+
+    final dynamic result = await service.cutPixel(
+      sessionId: 'session-1',
+      tileSize: 52,
+    );
+
+    expect(capturedUri.toString(), 'https://example.test/cut_pixel');
+    expect(capturedFields['session_id'], 'session-1');
+    expect(capturedFields['tile_size'], '52');
+    expect(result.sessionId, 'session-1');
+    expect(result.inputWidth, 50);
+    expect(result.inputHeight, 52);
+    expect(result.targetWidth, 52);
+    expect(result.targetHeight, 52);
+    expect(result.tileSize, 52);
+    expect(result.cols, 1);
+    expect(result.rows, 1);
+    expect(result.crop, <int>[0, 0, 0, 0]);
+    expect(result.padding, <int>[1, 1, 0, 0]);
+    expect(result.canvasBase64, 'ZmFrZS1jYW52YXM=');
+    expect(result.tilesBase64, <String>['ZmFrZS10aWxl']);
+  });
 }

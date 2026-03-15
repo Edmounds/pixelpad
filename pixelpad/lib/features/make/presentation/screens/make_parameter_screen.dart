@@ -70,10 +70,11 @@ class _MakeParameterScreenState extends State<MakeParameterScreen> {
     });
     try {
       final BeanPreset preset = await BeanPresetStorage.load();
-      final MakePipelineSession session = await _pipelineService.initializeSession(
-        imageBytes: widget.imageBytes,
-        settingsFile: preset.settingsFile,
-      );
+      final MakePipelineSession session = await _pipelineService
+          .initializeSession(
+            imageBytes: widget.imageBytes,
+            settingsFile: preset.settingsFile,
+          );
       if (!mounted) {
         return;
       }
@@ -109,15 +110,16 @@ class _MakeParameterScreenState extends State<MakeParameterScreen> {
       _error = null;
     });
     try {
-      final MakePipelineResult result = await _pipelineService.processWithParameters(
-        sessionId: session.sessionId,
-        sessionWidth: session.width,
-        sessionHeight: session.height,
-        perfectWidth: session.perfectWidth,
-        perfectHeight: session.perfectHeight,
-        maxColors: _draftMaxColors,
-        tolerance: _draftTolerance,
-      );
+      final MakePipelineResult result = await _pipelineService
+          .processWithParameters(
+            sessionId: session.sessionId,
+            sessionWidth: session.width,
+            sessionHeight: session.height,
+            perfectWidth: session.perfectWidth,
+            perfectHeight: session.perfectHeight,
+            maxColors: _draftMaxColors,
+            tolerance: _draftTolerance,
+          );
       if (!mounted) {
         return;
       }
@@ -139,9 +141,9 @@ class _MakeParameterScreenState extends State<MakeParameterScreen> {
         _error = message;
         _processing = false;
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(message)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(message)));
     }
   }
 
@@ -183,12 +185,14 @@ class _MakeParameterScreenState extends State<MakeParameterScreen> {
 
   Future<void> _handleConfirm() async {
     final MakePipelineResult? result = _latestResult;
-    if (!_canConfirm || result == null) {
+    final MakePipelineSession? session = _session;
+    if (!_canConfirm || result == null || session == null) {
       return;
     }
     await Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (BuildContext context) => MakeResultScreen(
+          sessionId: session.sessionId,
           mapping: result.mapping,
           palette: result.palette,
           bgMask: result.bgMask,
@@ -216,9 +220,7 @@ class _MakeParameterScreenState extends State<MakeParameterScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _PreviewCard(
-                      child: _buildPreviewContent(),
-                    ),
+                    _PreviewCard(child: _buildPreviewContent()),
                     const SizedBox(height: 18),
                     _ParameterCard(
                       key: MakeParameterScreen.maxColorsCardKey,
@@ -259,8 +261,9 @@ class _MakeParameterScreenState extends State<MakeParameterScreen> {
                   Expanded(
                     child: ElevatedButton(
                       key: MakeParameterScreen.processButtonKey,
-                      onPressed:
-                          (_processing || _session == null) ? null : _runProcessing,
+                      onPressed: (_processing || _session == null)
+                          ? null
+                          : _runProcessing,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFFF9F871),
                         foregroundColor: const Color(0xFF232323),
@@ -405,10 +408,7 @@ class _ParameterCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 8),
-              const Icon(
-                Icons.chevron_right,
-                color: AppColors.white,
-              ),
+              const Icon(Icons.chevron_right, color: AppColors.white),
             ],
           ),
         ),

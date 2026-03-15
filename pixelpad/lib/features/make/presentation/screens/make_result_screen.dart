@@ -5,23 +5,30 @@ import 'package:flutter_svg/flutter_svg.dart';
 
 import 'package:pixelpad/core/theme/app_theme.dart';
 import 'package:pixelpad/features/device/domain/services/bluetooth_service.dart';
+import 'package:pixelpad/features/make/data/hardware_upload_image.dart';
 import 'package:pixelpad/features/make/data/pixel_renderer.dart';
 import 'package:pixelpad/features/make/data/pixelpad_api_service.dart';
 
 class MakeResultScreen extends StatefulWidget {
+  final String sessionId;
   final Uint16List mapping;
   final List<PaletteColorEntry> palette;
   final Uint8List bgMask;
   final int width;
   final int height;
+  final PixelPadApiService? api;
+  final DeviceImageUploader? btService;
 
   const MakeResultScreen({
     super.key,
+    required this.sessionId,
     required this.mapping,
     required this.palette,
     required this.bgMask,
     required this.width,
     required this.height,
+    this.api,
+    this.btService,
   });
 
   @override
@@ -33,9 +40,13 @@ class _MakeResultScreenState extends State<MakeResultScreen> {
   bool _loading = false;
   String? _error;
   final Set<int> _selected = <int>{};
-  final BluetoothTransferService _btService = BluetoothTransferService();
+  late final DeviceImageUploader _btService;
+  late final PixelPadApiService _api;
   bool _btUploading = false;
   int _renderVersion = 0;
+  Future<HardwareCutMetadata>? _hardwareMetadataFuture;
+  int? _queuedUploadVersion;
+  int _uploadVersion = 0;
 
   List<_ColorToken> get _tokens => List<_ColorToken>.generate(
     widget.palette.length,
@@ -49,7 +60,44 @@ class _MakeResultScreenState extends State<MakeResultScreen> {
   @override
   void initState() {
     super.initState();
+    _btService = widget.btService ?? BluetoothTransferService();
+    _api = widget.api ?? PixelPadApiService();
+    _ensureHardwareMetadataFuture();
     _renderLocalImage();
+    _queueHardwareUpload();
+  }
+
+  Future<HardwareCutMetadata> _ensureHardwareMetadataFuture() {
+    final Future<HardwareCutMetadata>? existing = _hardwareMetadataFuture;
+    if (existing != null) {
+      return existing;
+    }
+
+    final Future<HardwareCutMetadata> future = _prefetchHardwareMetadata();
+    future.then<void>(
+      (_) {},
+      onError: (Object _, StackTrace __) {
+        if (identical(_hardwareMetadataFuture, future)) {
+          _hardwareMetadataFuture = null;
+        }
+      },
+    );
+    _hardwareMetadataFuture = future;
+    return future;
+  }
+
+  Future<HardwareCutMetadata> _prefetchHardwareMetadata() async {
+    final CutPixelResult result = await _api.cutPixel(
+      sessionId: widget.sessionId,
+      tileSize: 52,
+    );
+    if (result.targetWidth != 52 ||
+        result.targetHeight != 52 ||
+        result.cols != 1 ||
+        result.rows != 1) {
+      throw Exception('当前作品不是单个52x52设备画布，无法直接同步到设备');
+    }
+    return HardwareCutMetadata.fromCutPixelResult(result);
   }
 
   Future<void> _renderLocalImage() async {
@@ -76,7 +124,6 @@ class _MakeResultScreenState extends State<MakeResultScreen> {
       setState(() {
         _imageBytes = imageBytes;
       });
-      _autoUploadToDevice(imageBytes);
     } catch (_) {
       if (!mounted || currentVersion != _renderVersion) {
         return;
@@ -93,13 +140,45 @@ class _MakeResultScreenState extends State<MakeResultScreen> {
     }
   }
 
+  Future<Uint8List> _buildHardwareUploadBytes() async {
+    final HardwareCutMetadata metadata = await _ensureHardwareMetadataFuture();
+    return renderHardwareUploadPng(
+      width: widget.width,
+      height: widget.height,
+      mapping: widget.mapping,
+      palette: widget.palette,
+      bgMask: widget.bgMask,
+      metadata: metadata,
+      selectedIndices: _selected.isEmpty ? null : Set<int>.from(_selected),
+    );
+  }
+
+  void _queueHardwareUpload() {
+    if (!_btService.isConnected) {
+      return;
+    }
+    _queuedUploadVersion = ++_uploadVersion;
+    if (_btUploading) {
+      return;
+    }
+    _drainQueuedUploads();
+  }
+
   /// 蓝牙已连接时，静默将图片上传到设备。失败仅 SnackBar 提示，不阻断操作。
-  Future<void> _autoUploadToDevice(Uint8List imageBytes) async {
-    if (!_btService.isConnected || _btUploading) return;
+  Future<void> _drainQueuedUploads() async {
+    if (!_btService.isConnected || _btUploading) {
+      return;
+    }
+    final int? currentQueue = _queuedUploadVersion;
+    if (currentQueue == null) {
+      return;
+    }
+    _queuedUploadVersion = null;
     setState(() {
       _btUploading = true;
     });
     try {
+      final Uint8List imageBytes = await _buildHardwareUploadBytes();
       await _btService.uploadImage(imageBytes, (_) {});
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -124,6 +203,10 @@ class _MakeResultScreenState extends State<MakeResultScreen> {
           _btUploading = false;
         });
       }
+      if (_queuedUploadVersion != null &&
+          _queuedUploadVersion != currentQueue) {
+        _drainQueuedUploads();
+      }
     }
   }
 
@@ -136,6 +219,7 @@ class _MakeResultScreenState extends State<MakeResultScreen> {
       }
     });
     _renderLocalImage();
+    _queueHardwareUpload();
   }
 
   @override

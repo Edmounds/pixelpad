@@ -28,9 +28,9 @@ class PixelPadApiService {
       http.MultipartFile.fromBytes('file', imageBytes, filename: filename),
     );
 
-    final http.StreamedResponse streamed = await _client.send(request).timeout(
-      _timeout,
-    );
+    final http.StreamedResponse streamed = await _client
+        .send(request)
+        .timeout(_timeout);
     final http.Response response = await http.Response.fromStream(
       streamed,
     ).timeout(_timeout);
@@ -40,9 +40,7 @@ class PixelPadApiService {
     return SessionResult.fromJson(_decodeJsonBody(response.body));
   }
 
-  Future<PerfectPixelResult> perfectPixel({
-    required String sessionId,
-  }) async {
+  Future<PerfectPixelResult> perfectPixel({required String sessionId}) async {
     final http.Response response = await _client
         .post(
           Uri.parse('$baseUrl/perfect_pixel'),
@@ -99,6 +97,25 @@ class PixelPadApiService {
       throw Exception('color_map_failed:${response.statusCode}');
     }
     return ColorMapResult.fromJson(_decodeJsonBody(response.body));
+  }
+
+  Future<CutPixelResult> cutPixel({
+    required String sessionId,
+    int tileSize = 52,
+  }) async {
+    final http.Response response = await _client
+        .post(
+          Uri.parse('$baseUrl/cut_pixel'),
+          body: <String, String>{
+            'session_id': sessionId,
+            'tile_size': tileSize.toString(),
+          },
+        )
+        .timeout(_timeout);
+    if (response.statusCode != 200) {
+      throw Exception('cut_pixel_failed:${response.statusCode}');
+    }
+    return CutPixelResult.fromJson(_decodeJsonBody(response.body));
   }
 }
 
@@ -194,6 +211,55 @@ class ColorMapResult {
         json['mapping_u16le_base64'] ?? json['mappingU16leBase64'],
       ),
       previewPadding: _toIntList(json['preview_padding']),
+    );
+  }
+}
+
+class CutPixelResult {
+  final String sessionId;
+  final int inputWidth;
+  final int inputHeight;
+  final int targetWidth;
+  final int targetHeight;
+  final int tileSize;
+  final int cols;
+  final int rows;
+  final List<int> crop;
+  final List<int> padding;
+  final String canvasBase64;
+  final List<String> tilesBase64;
+
+  const CutPixelResult({
+    required this.sessionId,
+    required this.inputWidth,
+    required this.inputHeight,
+    required this.targetWidth,
+    required this.targetHeight,
+    required this.tileSize,
+    required this.cols,
+    required this.rows,
+    required this.crop,
+    required this.padding,
+    required this.canvasBase64,
+    required this.tilesBase64,
+  });
+
+  factory CutPixelResult.fromJson(Map<String, dynamic> json) {
+    return CutPixelResult(
+      sessionId: _asString(json['session_id'] ?? json['sessionId']),
+      inputWidth: _asInt(json['input_width'] ?? json['inputWidth']),
+      inputHeight: _asInt(json['input_height'] ?? json['inputHeight']),
+      targetWidth: _asInt(json['target_width'] ?? json['targetWidth']),
+      targetHeight: _asInt(json['target_height'] ?? json['targetHeight']),
+      tileSize: _asInt(json['tile_size'] ?? json['tileSize']),
+      cols: _asInt(json['cols']),
+      rows: _asInt(json['rows']),
+      crop: _toIntList(json['crop']) ?? const <int>[],
+      padding: _toIntList(json['padding']) ?? const <int>[],
+      canvasBase64: _asString(json['canvas_base64'] ?? json['canvasBase64']),
+      tilesBase64: (json['tiles_base64'] as List<dynamic>? ?? const <dynamic>[])
+          .map((dynamic value) => value.toString())
+          .toList(growable: false),
     );
   }
 }
