@@ -61,7 +61,8 @@ class _LoginScreenState extends State<LoginScreen>
               child: Row(
                 children: [
                   InkWell(
-                    onTap: () => AppNavigator.pop(context),
+                    onTap: () =>
+                        AppNavigator.pushNamedAndRemoveUntil(context, AppRoutes.mainShell),
                     borderRadius: BorderRadius.circular(20),
                     child: Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
